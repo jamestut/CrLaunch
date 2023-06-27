@@ -31,6 +31,7 @@ def start_launcher(datadir, exepath):
 			print(f" {i + 1}. {cd.nickname} ({cd.name})")
 		else:
 			print(f" {i + 1}. {cd.name}")
+	print(" 0. (Cancel and exit)")
 	if not len(available_dirs):
 		print("(No profiles available)")
 		return
@@ -39,10 +40,12 @@ def start_launcher(datadir, exepath):
 		try:
 			rd = input('Select: ')
 			idx = int(rd) - 1
-			if idx < 0 or idx > len(available_dirs):
+			if idx < 0:
+				sys.exit(0)
+			if idx > len(available_dirs):
 				raise ValueError()
 			break
-		except:
+		except ValueError:
 			print("Invalid selection! Try again.")
 	cd = available_dirs[idx]
 
