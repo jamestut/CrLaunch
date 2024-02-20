@@ -6,35 +6,23 @@ import argparse
 import json
 from collections import namedtuple
 
-DirType = namedtuple('DirType', ['name', 'nickname'])
+ProfileInfo = namedtuple('ProfileInfo', ['dirname', 'nickname'])
 
 def start_launcher(datadir, exepath):
-	exclusion = set(["System Profile"])
+	with open(os.path.join(datadir, 'Local State'), 'r') as f:
+		local_state_data = json.load(f)
+	profile_infos = local_state_data.get('profile', {}).get('info_cache', {})
+	profiles = sorted(ProfileInfo(dirname, pi['name']) for dirname, pi in profile_infos.items())
 
-	available_dirs = []
-	for e in os.scandir(datadir):
-		if e.name in exclusion:
-			continue
-		try:
-			pth = os.path.join(datadir, e.name, 'Preferences')
-			with open(pth, 'rb') as f:
-				pref = json.load(f)
-		except (FileNotFoundError, NotADirectoryError):
-			continue
-		available_dirs.append(
-			DirType(e.name, pref.get('profile', {}).get('name', None)))
-	available_dirs.sort()
-
-	print("Available profiles:")
-	for i, cd in enumerate(available_dirs):
-		if cd.nickname:
-			print(f" {i + 1}. {cd.nickname} ({cd.name})")
-		else:
-			print(f" {i + 1}. {cd.name}")
-	print(" 0. (Cancel and exit)")
-	if not len(available_dirs):
+	if not len(profiles):
 		print("(No profiles available)")
-		return
+	print("Available profiles:")
+	for i, profinfo in enumerate(profiles):
+		if profinfo.dirname == profinfo.nickname:
+			print(f" {i + 1}. {profinfo.dirname}")
+		else:
+			print(f" {i + 1}. {profinfo.nickname} ({profinfo.dirname})")
+	print(" 0. (Cancel and exit)")
 
 	while 1:
 		try:
@@ -42,14 +30,14 @@ def start_launcher(datadir, exepath):
 			idx = int(rd) - 1
 			if idx < 0:
 				sys.exit(0)
-			if idx > len(available_dirs):
+			if idx > len(profiles):
 				raise ValueError()
 			break
 		except ValueError:
-			print("Invalid selection! Try again.")
-	cd = available_dirs[idx]
+			print("Invalid input! Try again.")
+	selected_profile = profiles[idx]
 
-	os.execvp(exepath, [exepath, f"--profile-directory={cd.name}"])
+	os.execvp(exepath, [exepath, f"--profile-directory={selected_profile.dirname}"])
 
 def main():
 	parser = argparse.ArgumentParser()
